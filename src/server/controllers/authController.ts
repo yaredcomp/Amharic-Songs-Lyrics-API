@@ -23,6 +23,20 @@ export const authController = {
     }
   },
 
+  async googleConfig(_req: Request, res: Response) {
+    return sendSuccess(res, { clientId: authService.getGoogleClientId() }, 200);
+  },
+
+  async googleLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.validated?.body as { idToken: string };
+      const result = await authService.loginWithGoogle(body.idToken);
+      return sendSuccess(res, result, 200);
+    } catch (err) {
+      return next(err);
+    }
+  },
+
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
       const body = req.validated?.body as { refreshToken: string };

@@ -13,6 +13,7 @@ export const env = {
   jwtRefreshExpiresDays: Number(process.env.JWT_REFRESH_EXPIRES_DAYS || 7),
   corsOrigin: process.env.CORS_ORIGIN || '',
   appUrl: process.env.APP_URL || '',
+  googleClientId: (process.env.GOOGLE_CLIENT_ID || '').trim(),
   adminEmail: (process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
   adminPasscode: (process.env.ADMIN_PASSCODE || '').trim(),
 };

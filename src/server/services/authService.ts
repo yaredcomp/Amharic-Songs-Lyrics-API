@@ -1,3 +1,4 @@
+import { OAuth2Client } from 'google-auth-library';
 import { env } from '../config/env.ts';
 import { logger } from '../config/logger.ts';
 import { auditLogsRepository } from '../repositories/auditLogsRepository.ts';
@@ -12,6 +13,8 @@ import {
   verifyPassword,
   verifyRefreshToken,
 } from '../utils/crypto.ts';
+
+const googleOAuthClient = new OAuth2Client();
 
 function toPublicUser(user: {
   id: string;
@@ -102,6 +105,50 @@ export const authService = {
     }
 
     logger.info({ event: 'user_logged_in', userId: user.id }, 'User authenticated');
+    return issueTokenPair(user);
+  },
+
+  getGoogleClientId() {
+    return env.googleClientId || null;
+  },
+
+  async loginWithGoogle(idToken: string) {
+    if (!env.googleClientId) {
+      throw new AppError(
+        503,
+        'GOOGLE_OAUTH_NOT_CONFIGURED',
+        'Google sign-in is not configured on this server'
+      );
+    }
+
+    let payload;
+    try {
+      const ticket = await googleOAuthClient.verifyIdToken({
+        idToken,
+        audience: env.googleClientId,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new AppError(401, 'INVALID_GOOGLE_TOKEN', 'Google ID token is invalid or expired');
+    }
+
+    const email = payload?.email?.toLowerCase();
+    if (!payload?.sub || !email || payload.email_verified !== true) {
+      throw new AppError(401, 'UNVERIFIED_GOOGLE_ACCOUNT', 'A verified Google email is required');
+    }
+
+    const user = await usersRepository.upsertExternalUser({
+      uid: payload.sub,
+      email,
+      name: payload.name || email.split('@')[0],
+      forceAdmin: Boolean(env.adminEmail) && email === env.adminEmail,
+    });
+
+    if (!user.isActive) {
+      throw new AppError(403, 'ACCOUNT_DISABLED', 'User account is disabled');
+    }
+
+    logger.info({ event: 'google_user_logged_in', userId: user.id }, 'User authenticated with Google');
     return issueTokenPair(user);
   },
 

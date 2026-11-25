@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "Amharic Lyrics API Platform",
+    "description": "Complete Postman collection for Public Lyrics REST API, Auth, Developer Keys, and Admin endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "apiKey", "value": "amlp_live_YOUR_API_KEY" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "lyricsId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        { "name": "Health Check", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+        { "name": "Liveness", "request": { "method": "GET", "url": "{{baseUrl}}/health/live" } },
+        { "name": "Readiness", "request": { "method": "GET", "url": "{{baseUrl}}/health/ready" } }
+      ]
+    },
+    {
+      "name": "Public Lyrics & Artists",
+      "item": [
+        {
+          "name": "List & Search Lyrics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": "{{baseUrl}}/api/v1/lyrics?page=1&limit=10&sortBy=views&order=desc"
+          }
+        },
+        {
+          "name": "Popular Lyrics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": "{{baseUrl}}/api/v1/lyrics/popular"
+          }
+        },
+        {
+          "name": "Recent Lyrics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": "{{baseUrl}}/api/v1/lyrics/recent"
+          }
+        },
+        {
+          "name": "Get Lyrics By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": "{{baseUrl}}/api/v1/lyrics/{{lyricsId}}"
+          }
+        },
+        {
+          "name": "List Artists",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": "{{baseUrl}}/api/v1/artists"
+          }
+        },
+        {
+          "name": "Get Artist By Name",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": "{{baseUrl}}/api/v1/artists/Teddy%20Afro"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Selamawit Bekele\",\n  \"email\": \"dev@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/admin/stats"
+          }
+        },
+        {
+          "name": "Create Lyrics",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "create-track-001" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"አዲስ ዘመን (Addis Zemen)\",\n  \"titleTranslit\": \"Addis Zemen\",\n  \"artist\": \"Teddy Afro\",\n  \"album\": \"Ethiopia\",\n  \"genre\": \"Contemporary\",\n  \"language\": \"am\",\n  \"releaseYear\": 2017,\n  \"lyrics\": \"አዲስ ዘመን መጣ በፍቅር የተሞላ...\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/lyrics"
+          }
+        }
+      ]
+    }
+  ]
+}

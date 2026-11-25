@@ -1,6 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import { adminAuth } from '../../lib/firebase-admin.ts';
-import { env } from '../config/env.ts';
 import { logger } from '../config/logger.ts';
 import { apiKeysRepository } from '../repositories/apiKeysRepository.ts';
 import { usersRepository } from '../repositories/usersRepository.ts';
@@ -109,7 +107,6 @@ export async function requireAuth(
     return next(new AppError(401, 'UNAUTHORIZED', 'Empty authorization token'));
   }
 
-  // 1. Try local JWT access token first
   try {
     const decoded = verifyAccessToken(token);
     const user = await usersRepository.findById(decoded.sub);
@@ -126,43 +123,7 @@ export async function requireAuth(
     };
     return next();
   } catch {
-    // Fall through to Firebase ID Token verification
-  }
-
-  // 2. Try Firebase ID Token
-  try {
-    const decodedFirebase = await adminAuth.verifyIdToken(token);
-    const email = (decodedFirebase.email || '').toLowerCase();
-    if (!email || decodedFirebase.email_verified !== true) {
-      return next(
-        new AppError(401, 'UNAUTHORIZED', 'Firebase account must have a verified email')
-      );
-    }
-
-    const isConfiguredAdmin = Boolean(env.adminEmail) && email === env.adminEmail;
-
-    const user = await usersRepository.upsertFirebaseUser({
-      uid: decodedFirebase.uid,
-      email,
-      name: decodedFirebase.name || email.split('@')[0],
-      forceAdmin: isConfiguredAdmin,
-    });
-
-    if (!user.isActive) {
-      return next(new AppError(403, 'ACCOUNT_DISABLED', 'User account is disabled'));
-    }
-
-    req.authUser = {
-      id: user.id,
-      uid: user.uid,
-      name: user.name,
-      email: user.email,
-      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
-      isActive: user.isActive,
-    };
-    return next();
-  } catch (err) {
-    logger.warn({ event: 'auth_token_invalid', err }, 'Rejected invalid bearer token');
+    logger.warn({ event: 'auth_token_invalid' }, 'Rejected invalid bearer token');
     return next(new AppError(401, 'INVALID_TOKEN', 'Invalid or expired authorization token'));
   }
 }

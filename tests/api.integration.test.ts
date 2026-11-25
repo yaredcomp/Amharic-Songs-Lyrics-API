@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminAuth } from '../src/lib/firebase-admin.ts';
 import { env } from '../src/server/config/env.ts';
 import { sha256Hex } from '../src/server/utils/crypto.ts';
 
@@ -25,9 +24,34 @@ vi.mock('../src/db/index.ts', () => ({
   createPool: vi.fn(),
 }));
 
-vi.mock('../src/lib/firebase-admin.ts', () => ({
-  adminAuth: {
-    verifyIdToken: vi.fn().mockRejectedValue(new Error('Mock firebase token invalid')),
+vi.mock('google-auth-library', () => ({
+  OAuth2Client: class {
+    async verifyIdToken({ idToken, audience }: { idToken: string; audience: string }) {
+      if (audience !== 'test-google-client-id') throw new Error('Invalid audience');
+      const users: Record<string, Record<string, unknown>> = {
+        'verified-google-id-token': {
+          sub: 'google-developer-sub',
+          email: 'google-developer@example.com',
+          email_verified: true,
+          name: 'Google Developer',
+        },
+        'verified-admin-google-id-token': {
+          sub: 'google-admin-sub',
+          email: 'admin@trusted.test',
+          email_verified: true,
+          name: 'Trusted Admin',
+        },
+        'unverified-google-id-token': {
+          sub: 'google-unverified-sub',
+          email: 'admin@trusted.test',
+          email_verified: false,
+          name: 'Unverified Admin',
+        },
+      };
+      const payload = users[idToken];
+      if (!payload) throw new Error('Invalid Google token');
+      return { getPayload: () => payload };
+    }
   },
 }));
 
@@ -82,7 +106,7 @@ vi.mock('../src/server/repositories/usersRepository.ts', () => ({
       store.users.set(id, user);
       return { status: 'created' as const, user };
     }),
-    upsertFirebaseUser: vi.fn(async (input: {
+    upsertExternalUser: vi.fn(async (input: {
       uid: string;
       email: string;
       name: string;
@@ -335,7 +359,7 @@ const EXHAUSTED_RAW_KEY = 'amlp_live_quota_test_key_12345678901';
 beforeEach(() => {
   env.adminEmail = 'admin@trusted.test';
   env.adminPasscode = TEST_ADMIN_PASSCODE;
-  vi.mocked(adminAuth.verifyIdToken).mockRejectedValue(new Error('Mock firebase token invalid'));
+  env.googleClientId = 'test-google-client-id';
   store.users.clear();
   store.lyrics.clear();
   store.apiKeys.clear();
@@ -447,73 +471,60 @@ describe('Amharic Lyrics API Integration Tests', () => {
     expect(Array.from(store.users.values()).filter((user) => user.role === 'ADMIN')).toHaveLength(1);
   });
 
-  it('does not promote the first Firebase account unless its verified email is allowlisted', async () => {
-    vi.mocked(adminAuth.verifyIdToken).mockResolvedValue({
-      aud: 'test-project',
-      auth_time: 1,
-      exp: 9999999999,
-      firebase: { identities: { email: ['first-user@example.com'] }, sign_in_provider: 'password' },
-      iat: 1,
-      iss: 'https://securetoken.google.com/test-project',
-      sub: 'firebase-first-user',
-      uid: 'firebase-first-user',
-      email: 'first-user@example.com',
-      email_verified: true,
-      name: 'First User',
+  it('exchanges a verified Google ID token for platform JWTs and honors the admin allowlist', async () => {
+    const config = await request(app).get('/api/v1/auth/google/config');
+    expect(config.status).toBe(200);
+    expect(config.body.data.clientId).toBe('test-google-client-id');
+
+    const developerLogin = await request(app)
+      .post('/api/v1/auth/google')
+      .send({ idToken: 'verified-google-id-token' });
+    expect(developerLogin.status).toBe(200);
+    expect(developerLogin.body.data.user).toMatchObject({
+      email: 'google-developer@example.com',
+      role: 'USER',
     });
 
-    const response = await request(app)
+    const profile = await request(app)
       .get('/api/v1/auth/me')
-      .set('Authorization', 'Bearer firebase-user-token');
+      .set('Authorization', `Bearer ${developerLogin.body.data.accessToken}`);
+    expect(profile.status).toBe(200);
+    expect(profile.body.data.user.email).toBe('google-developer@example.com');
 
-    expect(response.status).toBe(200);
-    expect(response.body.data.user.role).toBe('USER');
+    const adminLogin = await request(app)
+      .post('/api/v1/auth/google')
+      .send({ idToken: 'verified-admin-google-id-token' });
+    expect(adminLogin.status).toBe(200);
+    expect(adminLogin.body.data.user.role).toBe('ADMIN');
   });
 
-  it('does not accept an unverified Firebase email as an administrator identity', async () => {
-    vi.mocked(adminAuth.verifyIdToken).mockResolvedValue({
-      aud: 'test-project',
-      auth_time: 1,
-      exp: 9999999999,
-      firebase: { identities: { email: ['admin@trusted.test'] }, sign_in_provider: 'password' },
-      iat: 1,
-      iss: 'https://securetoken.google.com/test-project',
-      sub: 'firebase-unverified-admin',
-      uid: 'firebase-unverified-admin',
-      email: 'admin@trusted.test',
-      email_verified: false,
-      name: 'Unverified Admin',
-    });
+  it('rejects invalid and unverified Google ID tokens without creating users', async () => {
+    const invalid = await request(app)
+      .post('/api/v1/auth/google')
+      .send({ idToken: 'invalid-google-id-token' });
+    expect(invalid.status).toBe(401);
+    expect(invalid.body.error.code).toBe('INVALID_GOOGLE_TOKEN');
 
-    const response = await request(app)
-      .get('/api/v1/auth/me')
-      .set('Authorization', 'Bearer firebase-user-token');
-
-    expect(response.status).toBe(401);
+    const unverified = await request(app)
+      .post('/api/v1/auth/google')
+      .send({ idToken: 'unverified-google-id-token' });
+    expect(unverified.status).toBe(401);
+    expect(unverified.body.error.code).toBe('UNVERIFIED_GOOGLE_ACCOUNT');
     expect(store.users.size).toBe(0);
   });
 
-  it('promotes only the configured verified Firebase administrator email', async () => {
-    vi.mocked(adminAuth.verifyIdToken).mockResolvedValue({
-      aud: 'test-project',
-      auth_time: 1,
-      exp: 9999999999,
-      firebase: { identities: { email: ['admin@trusted.test'] }, sign_in_provider: 'password' },
-      iat: 1,
-      iss: 'https://securetoken.google.com/test-project',
-      sub: 'firebase-allowlisted-admin',
-      uid: 'firebase-allowlisted-admin',
-      email: 'admin@trusted.test',
-      email_verified: true,
-      name: 'Trusted Admin',
-    });
+  it('reports missing Google OAuth configuration instead of attempting token verification', async () => {
+    env.googleClientId = '';
 
-    const response = await request(app)
-      .get('/api/v1/auth/me')
-      .set('Authorization', 'Bearer firebase-user-token');
+    const config = await request(app).get('/api/v1/auth/google/config');
+    expect(config.status).toBe(200);
+    expect(config.body.data.clientId).toBeNull();
 
-    expect(response.status).toBe(200);
-    expect(response.body.data.user.role).toBe('ADMIN');
+    const login = await request(app)
+      .post('/api/v1/auth/google')
+      .send({ idToken: 'verified-google-id-token' });
+    expect(login.status).toBe(503);
+    expect(login.body.error.code).toBe('GOOGLE_OAUTH_NOT_CONFIGURED');
   });
 
   it('serves health endpoints, OpenAPI spec, and security headers', async () => {

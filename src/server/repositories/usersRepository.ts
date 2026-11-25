@@ -119,7 +119,7 @@ export const usersRepository = {
     }
   },
 
-  async upsertFirebaseUser(input: {
+  async upsertExternalUser(input: {
     uid: string;
     email: string;
     name: string;
@@ -165,7 +165,7 @@ export const usersRepository = {
         .returning();
       return rows[0];
     } catch (error) {
-      console.error('Database query failed (users.upsertFirebaseUser):', error);
+      console.error('Database query failed (users.upsertExternalUser):', error);
       throw new Error('Database query failed. Please try again later.', { cause: error });
     }
   },

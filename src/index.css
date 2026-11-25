@@ -1,0 +1,303 @@
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+@import "@astryxdesign/core/tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+@layer base {
+  :root {
+    --portal-ink: #202820;
+    --portal-forest: #233b30;
+    --portal-terracotta: #b85c38;
+    --portal-saffron: #e4ad55;
+    --portal-paper: #f7f5ef;
+    --portal-line: #e4dfd3;
+    --portal-radius: 1.1rem;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  html,
+  body {
+    font-family: 'Manrope', 'Noto Sans Ethiopic', system-ui, -apple-system, sans-serif;
+    background-color: var(--color-background-body);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Fraunces', 'Noto Sans Ethiopic', Georgia, serif;
+    text-wrap: balance;
+  }
+
+  code,
+  pre,
+  kbd,
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Noto Sans Ethiopic', ui-monospace, SFMono-Regular, monospace;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-accent) 48%, transparent);
+    outline-offset: 3px;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  .brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .brand-mark {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.7rem;
+    color: #fffaf0;
+    background: var(--portal-forest);
+  }
+
+  .brand-wordmark {
+    font-family: 'Fraunces', 'Noto Sans Ethiopic', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+  }
+
+  .public-layout {
+    background:
+      radial-gradient(ellipse at 86% 0%, rgba(228, 173, 85, 0.1), transparent 28rem),
+      var(--color-background-body);
+  }
+
+  .public-topbar {
+    border-color: var(--portal-line);
+    background: color-mix(in srgb, var(--color-background-body) 92%, transparent);
+  }
+
+  .console-layout {
+    background: var(--color-background-body);
+  }
+
+  .console-sidebar {
+    border-color: var(--portal-line);
+    background: var(--color-background-card);
+  }
+
+  .console-sidebar-content {
+    padding-top: 1.25rem;
+  }
+
+  .console-icon-button {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease, transform 120ms var(--ease-out);
+  }
+
+  .console-icon-button:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-background-muted);
+  }
+
+  .console-icon-button:active,
+  .console-nav-item:active {
+    transform: scale(0.97);
+  }
+
+  .console-nav-item {
+    transition: color 140ms ease, background-color 140ms ease, transform 120ms var(--ease-out);
+  }
+
+  .route-transition {
+    animation: route-enter 180ms var(--ease-out) both;
+  }
+
+  @keyframes route-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes route-enter-reduced {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-transition {
+      animation: route-enter-reduced 140ms ease-out both !important;
+    }
+  }
+
+  .console-sidebar-label {
+    color: var(--color-text-secondary);
+    font-size: 0.65rem;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .console-topbar {
+    border-color: var(--portal-line);
+    background: color-mix(in srgb, var(--color-background-body) 90%, transparent);
+    backdrop-filter: blur(16px);
+  }
+
+  .console-content {
+    max-width: 90rem;
+  }
+
+  .public-footer {
+    border-color: var(--portal-line);
+  }
+
+  .home-page {
+    overflow: hidden;
+  }
+
+  .home-hero {
+    padding-top: clamp(2.5rem, 6vw, 5.5rem);
+  }
+
+  .home-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--color-text-accent);
+    font-size: 0.73rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .home-eyebrow::before {
+    width: 1.4rem;
+    height: 1px;
+    background: currentColor;
+    content: '';
+  }
+
+  .home-display {
+    max-width: 11ch;
+    font-size: clamp(3.2rem, 6.4vw, 6.25rem);
+    font-weight: 550;
+    letter-spacing: -0.065em;
+    line-height: 0.99;
+  }
+
+  .home-display em {
+    color: var(--color-text-accent);
+    font-style: italic;
+  }
+
+  .home-artwork {
+    isolation: isolate;
+    min-height: 30rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 1.5rem;
+    background-color: #24352e;
+    box-shadow: 0 2rem 5rem rgba(32, 40, 32, 0.16);
+  }
+
+  .home-artwork img {
+    filter: saturate(0.82);
+    transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .home-artwork:hover img {
+    transform: scale(1.035);
+  }
+
+  .home-section-label {
+    color: var(--color-text-accent);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .home-code-card {
+    border-radius: var(--portal-radius);
+    background: var(--color-background-card);
+    box-shadow: 0 1.2rem 3.2rem rgba(32, 40, 32, 0.06);
+  }
+
+  .home-track-row {
+    transition: background-color 160ms ease, transform 160ms ease;
+  }
+
+  .home-track-row:hover {
+    background-color: var(--color-background-surface);
+  }
+
+  @media (max-width: 1023px) {
+    .home-artwork {
+      min-height: 25rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .home-display {
+      font-size: clamp(3rem, 14vw, 4.5rem);
+    }
+
+    .home-artwork {
+      min-height: 23rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

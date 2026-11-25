@@ -66,6 +66,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required').max(128),
 });
 
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1, 'Google ID token is required').max(8192),
+});
+
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(10, 'Refresh token is required'),
 });
