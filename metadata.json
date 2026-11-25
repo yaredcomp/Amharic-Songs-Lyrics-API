@@ -1,0 +1,6 @@
+{
+  "name": "Amharic Lyrics API Platform",
+  "description": "Production REST API platform, developer portal, interactive API explorer, and admin dashboard for Amharic music lyrics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

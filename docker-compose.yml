@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: amharic-lyrics-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: amharic_user
+      POSTGRES_PASSWORD: ${SQL_PASSWORD:?Set SQL_PASSWORD in .env}
+      POSTGRES_DB: amharic_lyrics
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amharic_user -d amharic_lyrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: amharic-lyrics-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      SQL_HOST: postgres
+      SQL_DB_NAME: amharic_lyrics
+      SQL_USER: amharic_user
+      SQL_PASSWORD: ${SQL_PASSWORD:?Set SQL_PASSWORD in .env}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

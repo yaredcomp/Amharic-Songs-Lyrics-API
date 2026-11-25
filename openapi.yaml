@@ -1,0 +1,469 @@
+openapi: 3.1.0
+info:
+  title: Amharic Lyrics API Platform
+  version: 1.0.0
+  description: |
+    Production REST API for searching, filtering, and retrieving Amharic music lyrics in Ge'ez script and Latin transliteration, alongside developer authentication, API key management, and administrative catalog governance.
+  contact:
+    name: Amharic Lyrics API Engineering
+    email: developers@amhariclyrics.dev
+  license:
+    name: MIT
+servers:
+  - url: /api/v1
+    description: API v1 Base Path
+tags:
+  - name: Health
+    description: Liveness and readiness probes
+  - name: Lyrics
+    description: Public Amharic lyrics retrieval endpoints (requires x-api-key)
+  - name: Artists
+    description: Public artist catalog endpoints (requires x-api-key)
+  - name: Auth
+    description: Google OAuth, JWT authentication, refresh tokens, and profile
+  - name: Developer
+    description: Self-serve developer API key and analytics endpoints
+  - name: Admin
+    description: Administrative lyrics CRUD, platform stats, API keys, and audit logs
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Developer API key in format `amlp_live_...`
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Platform JWT access token issued by the API
+  schemas:
+    Lyrics:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "ትዝታ (Tizita)"
+        titleTranslit:
+          type: string
+          example: "Tizita"
+        artist:
+          type: string
+          example: "Mahmoud Ahmed"
+        album:
+          type: string
+          example: "Ere Mela Mela"
+        lyrics:
+          type: string
+          example: "ትዝታዬ መጣ የድሮው ትዝታ..."
+        language:
+          type: string
+          example: "am"
+        genre:
+          type: string
+          example: "Tizita"
+        releaseYear:
+          type: integer
+          nullable: true
+          example: 1975
+        views:
+          type: integer
+          example: 48210
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        keyPrefix:
+          type: string
+          example: "amlp_live_8f92c1ab"
+        name:
+          type: string
+          example: "Mobile Karaoke Prod"
+        isActive:
+          type: boolean
+        requestsUsed:
+          type: integer
+        dailyQuota:
+          type: integer
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Request validation failed"
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  location:
+                    type: string
+                  message:
+                    type: string
+paths:
+  /lyrics:
+    get:
+      tags: [Lyrics]
+      summary: Search and list Amharic lyrics
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - name: artist
+          in: query
+          schema: { type: string }
+        - name: genre
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [createdAt, views, title, artist, releaseYear], default: createdAt }
+        - name: order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        '200':
+          description: Paginated list of lyrics
+        '401':
+          description: Missing or invalid x-api-key
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          description: Daily quota exceeded
+  /lyrics/popular:
+    get:
+      tags: [Lyrics]
+      summary: Retrieve top 10 most viewed tracks
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Popular lyrics list
+  /lyrics/recent:
+    get:
+      tags: [Lyrics]
+      summary: Retrieve 10 most recently added tracks
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Recent lyrics list
+  /lyrics/{id}:
+    get:
+      tags: [Lyrics]
+      summary: Retrieve a single lyrics record by UUID
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Lyrics detail
+        '404':
+          description: Track not found
+  /artists:
+    get:
+      tags: [Artists]
+      summary: List all artists with track counts and genres
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Artist directory
+  /artists/{name}:
+    get:
+      tags: [Artists]
+      summary: Retrieve artist profile and discography lyrics
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Artist details and tracks
+        '404':
+          description: Artist not found
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a developer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201':
+          description: Account created with access & refresh tokens
+  /auth/google/config:
+    get:
+      tags: [Auth]
+      summary: Retrieve public Google OAuth client configuration
+      responses:
+        '200':
+          description: Google OAuth client ID, or null when sign-in is not configured
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Exchange a Google ID token for platform JWTs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken: { type: string, description: Google-issued ID token from Google Identity Services }
+      responses:
+        '200':
+          description: Authenticated user and platform access & refresh tokens
+        '401':
+          description: Invalid Google ID token or unverified email
+        '503':
+          description: Google OAuth is not configured
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Authenticated with JWT pair
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token and issue new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Rotated token pair
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user details
+  /developer/api-keys:
+    get:
+      tags: [Developer]
+      summary: List API keys owned by the signed-in developer
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Developer API keys
+    post:
+      tags: [Developer]
+      summary: Create a new API key (raw key shown once)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                dailyQuota: { type: integer, default: 1000 }
+      responses:
+        '201':
+          description: Created API key with one-time rawKey
+  /admin/lyrics:
+    post:
+      tags: [Admin]
+      summary: Create a new Amharic lyrics track
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, titleTranslit, artist, album, lyrics, genre]
+              properties:
+                title: { type: string }
+                titleTranslit: { type: string }
+                artist: { type: string }
+                album: { type: string }
+                lyrics: { type: string }
+                language: { type: string, default: "am" }
+                genre: { type: string }
+                releaseYear: { type: integer }
+      responses:
+        '201':
+          description: Created lyrics record
+  /admin/lyrics/{id}:
+    put:
+      tags: [Admin]
+      summary: Replace a lyrics track
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Updated lyrics record
+    patch:
+      tags: [Admin]
+      summary: Partially update a lyrics track
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Patched lyrics record
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a lyrics track
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Lyrics soft-deleted
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Retrieve platform catalog and API usage statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Aggregate platform metrics
+  /admin/api-keys:
+    get:
+      tags: [Admin]
+      summary: List all API keys across users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All platform API keys
+    post:
+      tags: [Admin]
+      summary: Create an API key as administrator
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Created API key
+  /admin/api-keys/{id}:
+    patch:
+      tags: [Admin]
+      summary: Enable, disable, rename, or update quota for an API key
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Updated API key
+    delete:
+      tags: [Admin]
+      summary: Revoke and delete an API key
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: API key revoked
