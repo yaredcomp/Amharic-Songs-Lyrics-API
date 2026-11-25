@@ -38,6 +38,7 @@ This repository includes deployment templates for **Render Free Tier** (`render.
    npm install --include=dev
    npx prisma generate
    npx prisma migrate deploy
+   npx prisma db seed
    npm run build
    ```
    and starts the server with `npm start` (`tsx server.ts`), binding to `0.0.0.0` on
@@ -47,7 +48,7 @@ For Google sign-in, create an OAuth 2.0 **Web application** client in Google Clo
 
 ## 2. Seeding Production Lyrics (Optional)
 
-To populate the curated Amharic lyrics catalog (28 songs) on a fresh deployment database:
+The Blueprint build runs `npx prisma db seed`, which populates the curated Amharic lyrics catalog (28 songs) automatically on deployment. To run it manually against a deployment database:
 
 ```bash
 npx prisma db seed
