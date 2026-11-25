@@ -49,6 +49,22 @@ This repository includes deployment templates for **Render Free Tier** (`render.
    and starts the server with `npm start` (`tsx server.ts`), binding to `0.0.0.0` on
    `process.env.PORT`.
 
+### Manually created web service (not via Blueprint)
+
+`render.yaml` is only applied when the service is created through **New -> Blueprint**. If you
+created the web service with **New -> Web Service**, configure it in the dashboard instead:
+
+- **Build Command**:
+  ```bash
+  npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run build
+  ```
+- **Start Command**: `npm start`
+- **Environment**: add every key from `.env.example` (at minimum `DATABASE_URL`, `APP_URL`,
+  `CORS_ORIGIN`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`).
+
+Without the migration step in the build command, the database stays empty and API calls fail with
+`relation "users" does not exist`.
+
 For Google sign-in, create an OAuth 2.0 **Web application** client in Google Cloud Console, add the deployed site origin under **Authorized JavaScript origins**, and set its client ID as `GOOGLE_CLIENT_ID` in the server environment. Add `http://localhost:3000` as an authorized origin for local development. The client ID is public; do not put a client secret in the app.
 
 ## 2. Seeding Production Lyrics (Optional)

@@ -12,7 +12,9 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "db:seed": "tsx scripts/seed-lyrics.ts",
-    "db:seed:prisma": "tsx prisma/seed.ts"
+    "db:seed:prisma": "tsx prisma/seed.ts",
+    "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
