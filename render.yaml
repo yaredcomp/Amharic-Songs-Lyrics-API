@@ -1,18 +1,20 @@
 # Render Blueprint for the Amharic Lyrics API.
 #
-# - Deploying with this Blueprint creates the Postgres instance below and injects
-#   DATABASE_URL automatically (Render's internal connection URL).
-# - If you already created a Postgres database manually, remove the `databases:`
-#   block and the `fromDatabase` entry, then set DATABASE_URL yourself under the
-#   service's Environment tab. Use the Internal Database URL when the web service
-#   and database are in the same region; the External Database URL must include
-#   `?sslmode=require`.
-# - Keep the service and database in the same region or internal URLs will not resolve.
-databases:
-  - name: amharic-lyrics-db
-    plan: free
-    databaseName: amharic_lyrics
-    user: amharic_lyrics_user
+# This blueprint expects an existing Render Postgres database. Paste its
+# **Internal Database URL** (Postgres -> Connect) into DATABASE_URL when Render
+# prompts for it (or set it later under the service's Environment tab).
+#
+# - Internal URL: postgresql://USER:PASSWORD@INTERNAL_HOST:5432/DATABASE
+#   Use it when the web service and database are in the same region.
+# - External URL: postgresql://USER:PASSWORD@EXTERNAL_HOST:5432/DATABASE?sslmode=require
+#   Use it only from your machine or CI; Render requires TLS externally.
+#
+# If you would rather have Render provision a new database, restore a
+# `databases:` block and replace the DATABASE_URL entry below with:
+#   - key: DATABASE_URL
+#     fromDatabase:
+#       name: amharic-lyrics-db
+#       property: connectionString
 
 services:
   - type: web
@@ -34,9 +36,7 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        fromDatabase:
-          name: amharic-lyrics-db
-          property: connectionString
+        sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
